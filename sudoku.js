@@ -47,7 +47,6 @@ function main(stdin, stdout, sudokuBox) {
         writeProgress(stdout, percentComplete, percentTime, timeRemaining);
     };
 
-    startGame();
     stdin.on("data", (data) => {
         // @ts-expect-error - data is actually implicitly cast to string
         const event = parseEvent(JSON.parse(data));
@@ -64,6 +63,7 @@ function main(stdin, stdout, sudokuBox) {
                 break;
         }
     })
+    startGame();
 }
 
 
@@ -161,6 +161,7 @@ function parseEvent(data) {
         }
     } else if (scaleSocketEvent) {
         if (scaleSocketEvent == "Join" && data?.id !== undefined) {
+            console.error("new player");
             return ['newPlayer', data.id];
         }
     }
@@ -186,9 +187,9 @@ function writeMessage(message, stdout, id = "message") {
 
 function writeProgress(stdout, percentComplete, percentTime, timeRemaining) {
     stdout.write(`<span id="completion-label">${percentComplete}% completed</span>\n`);
-    stdout.write(`<span id="completion-label-data" class="progress-bar" role="progressbar" aria-labelledby="completion-label" aria-valuenow="${percentComplete}"><svg width="100" height="10"><rect height="10" width="100" fill="white" /><rect height="10" width="${percentComplete}" fill="#0369a1" /></svg></span>`);
+    stdout.write(`<span id="completion-label-data" class="progress-bar" role="progressbar" aria-labelledby="completion-label" aria-valuenow="${percentComplete}"><svg width="100" height="10"><rect height="10" width="100" fill="white" /><rect height="10" width="${percentComplete}" fill="#0369a1" /></svg></span>\n`);
     stdout.write(`<span id="time-label">${timeRemaining} min remaining</span>\n`);
-    stdout.write(`<span id="time-label-data" class="progress-bar" role="progressbar" aria-labelledby="completion-label" aria-valuenow="${percentTime}"><svg width="100" height="10"><rect height="10" width="100" fill="white" /><rect height="10" width="${percentTime}" fill="#0369a1" /></svg></span>`);
+    stdout.write(`<span id="time-label-data" class="progress-bar" role="progressbar" aria-labelledby="completion-label" aria-valuenow="${percentTime}"><svg width="100" height="10"><rect height="10" width="100" fill="white" /><rect height="10" width="${percentTime}" fill="#0369a1" /></svg></span>\n`);
 }
 
 /**
