@@ -1,7 +1,7 @@
 const { checkSudoku, parseEvent, renderRow } = require('./sudoku');
 
 describe("parseEvent", () => {
-	test('parses events', () => {
+	test('parses htmx events', () => {
 		expect(parseEvent(
 			{ "cell_0_0": "3", "HEADERS": { "HX-Trigger": "cell_0_0" } }
 		)).toEqual(
@@ -12,6 +12,10 @@ describe("parseEvent", () => {
 		)).toEqual(
 			["setCell", 8, 8, 2]
 		);
+	});
+
+	test('parses scalesocket events', () => {
+		expect(parseEvent({ "t": "Join", "id": 123 })).toEqual(["newPlayer", 123]);
 	});
 
 	test('returns [null] for unparseable events', () => {
