@@ -113,11 +113,6 @@ function checkSudoku({ board, solutionNumbers, blankCount }) {
     const correctCount = board.flat().reduce((acc, value, i) =>
         (value == solutionNumbers[i]) ? acc + 1 : acc, 0
     );
-    board.flat().forEach((value, i) => {
-        if (value != 0 && value != solutionNumbers[i]) {
-            console.error("wrong", i, value, solutionNumbers[i])
-        }
-    });
     const percentComplete = Math.floor((correctCount + blankCount - totalCount) / (blankCount) * 10) * 10;
 
     return { percentComplete, isComplete: correctCount === totalCount }
