@@ -162,7 +162,6 @@ function parseEvent(data) {
         }
     } else if (scaleSocketEvent) {
         if (scaleSocketEvent == "Join" && data?.id !== undefined) {
-            console.error("new player");
             return ['newPlayer', data.id];
         }
     }
