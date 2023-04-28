@@ -50,19 +50,23 @@ function main(stdin, stdout, sudokuBox) {
 
     startGame();
     stdin.on("data", (data) => {
-        // @ts-expect-error - data is actually implicitly cast to string
-        const event = parseEvent(JSON.parse(data));
-        switch (event[0]) {
-            case "setCell":
-                const [_, x, y, value] = event;
-                context.board[y][x] = value;
-                stdout.write(renderCell(value, x, y) + "\n");
-                break;
-            case "newPlayer":
-                writeSudoku(context.board, context.originalBoard, stdout);
-                break;
-            default:
-                break;
+        try {
+            // @ts-expect-error - data is actually implicitly cast to string
+            const event = parseEvent(JSON.parse(data));
+            switch (event[0]) {
+                case "setCell":
+                    const [_, x, y, value] = event;
+                    context.board[y][x] = value;
+                    stdout.write(renderCell(value, x, y) + "\n");
+                    break;
+                case "newPlayer":
+                    writeSudoku(context.board, context.originalBoard, stdout);
+                    break;
+                default:
+                    break;
+            }
+        } catch (err) {
+            console.error(err);
         }
     })
 }
