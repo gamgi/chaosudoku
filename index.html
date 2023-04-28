@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chaosudoku</title>
+    <link rel="stylesheet" href="site.css">
+    <script src="https://unpkg.com/htmx.org@1.9.0"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
+</head>
+
+<body hx-ext="class-tools, preload" hx-ws="connect:/chatroom">
+    <div class="top-nav">
+        <h1>Chaosudoku</h1>
+        <h2>Can humanity collaborate in a massive multiplayer online sudoku?</h2>
+    </div>
+    <div id="notifications">
+    </div>
+    <section id="game">
+        <div id="status">
+            <div id="info">
+                <h3>Sudoku 1 out of 100</h3>
+                <p>A puzzle lasts 10 minutes. If it is solved, a new one is generated. Humanity has solved 1 puzzles.</p>
+            </div>
+            <div id="progress">
+                <div class="progress-bar-container">
+                    <span id="completion-label">?% completed</span>
+                    <span id="completion-label-data" class="progress-bar" role="progressbar" aria-labelledby="completion-label"
+                        aria-valuenow="?">
+                        <svg width="100" height="10">
+                            <rect height="10" width="100" fill="white" />
+                        </svg>
+                    </span>
+                </div>
+                <div class="progress-bar-container">
+                    <span id="time-label">? min remaining</span>
+                    <span id="time-label-data" class="progress-bar" role="progressbar" aria-labelledby="time-label"
+                        aria-valuenow="?">
+                        <svg width="100" height="10">
+                            <rect height="10" width="100" fill="#0369a1" />
+                        </svg>
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div id="error"></div>
+        <div id="sudoku">
+            <table>
+                <tr id="row_0"></tr>
+                <tr id="row_1"></tr>
+                <tr id="row_2"></tr>
+                <tr id="row_3"></tr>
+                <tr id="row_4"></tr>
+                <tr id="row_5"></tr>
+                <tr id="row_6"></tr>
+                <tr id="row_7"></tr>
+                <tr id="row_8"></tr>
+            </table>
+        </div>
+    </section>
+</body>
