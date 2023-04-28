@@ -7,7 +7,6 @@
     "test": "jest"
   },
   "author": "",
-  "license": "ISC",
   "dependencies": {
     "sudokubox": "^0.31.0",
     "ts-node": "^10.9.1"

@@ -18,20 +18,42 @@ if (require.main === module) {
  * @param {SudokuBox} sudokuBox
  */
 function main(stdin, stdout, sudokuBox) {
-    const context = {
-        ...generateTimes(10),
-        ...generateSudoku(sudokuBox),
+    let checkInterval;
+    let context;
+
+    const startGame = () => {
+        writeMessage("", process.stdout);
+        writeMessage("", process.stdout, "error");
+        context = {
+            ...generateTimes(10),
+            ...generateSudoku(sudokuBox),
+        }
+        writeSudoku(context.board, stdout);
+        checkInterval = setInterval(doChecks, 2500, context)
     };
 
-    writeSudoku(context.board, stdout);
+    const doChecks = (ctx) => {
+        const { percentComplete, isComplete } = checkSudoku(ctx);
+        const { percentTime, timeRemaining, isOuttaTime } = checkTime(ctx);
+        if (isOuttaTime) {
+            writeMessage("Failed!", process.stdout);
+            clearInterval(checkInterval);
+            setTimeout(() => startGame(), 5000);
+        } else if (isComplete) {
+            writeMessage("Success!", process.stdout);
+            clearInterval(checkInterval);
+            setTimeout(() => startGame(), 5000);
+        }
+        writeProgress(stdout, percentComplete, percentTime, timeRemaining);
+    };
 
+    startGame();
     stdin.on("data", (data) => {
         // @ts-expect-error - data is actually implicitly cast to string
         const event = parseEvent(JSON.parse(data));
         switch (event[0]) {
             case "setCell":
                 const [_, x, y, value] = event;
-                console.error("setcell", x, y, value);
                 context.board[y][x] = value;
                 stdout.write(renderCell(value, x, y) + "\n");
                 break;
@@ -42,19 +64,6 @@ function main(stdin, stdout, sudokuBox) {
                 break;
         }
     })
-
-    const checkInterval = setInterval((ctx) => {
-        const { percentComplete, isComplete } = checkSudoku(ctx);
-        const { percentTime, timeRemaining, isOuttaTime } = checkTime(ctx);
-        if (isOuttaTime) {
-            writeMessage("Failed!", process.stdout);
-            clearInterval(checkInterval);
-        } else if (isComplete) {
-            writeMessage("Success!", process.stdout);
-            clearInterval(checkInterval);
-        }
-        writeProgress(stdout, percentComplete, percentTime, timeRemaining);
-    }, 2500, context);
 }
 
 
