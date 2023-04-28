@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.2
-FROM node:16-alpine
+FROM node:18-alpine
 RUN apk --no-cache add curl
 RUN mkdir -p /app/node_modules && chown -R node:node /app
 

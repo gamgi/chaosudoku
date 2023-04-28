@@ -28,7 +28,7 @@ function main(stdin, stdout, sudokuBox) {
             ...generateTimes(10),
             ...generateSudoku(sudokuBox),
         }
-        writeSudoku(context.board, stdout);
+        writeSudoku(context.board, context.originalBoard, stdout);
         checkInterval = setInterval(doChecks, 2500, context)
     };
 
@@ -57,7 +57,7 @@ function main(stdin, stdout, sudokuBox) {
                 stdout.write(renderCell(value, x, y) + "\n");
                 break;
             case "newPlayer":
-                writeSudoku(context.board, stdout);
+                writeSudoku(context.board, context.originalBoard, stdout);
                 break;
             default:
                 break;
@@ -80,7 +80,7 @@ function generateTimes(timeMin) {
 
 /**
  * @param {SudokuBox} sudokuBox
- * @returns {{"board": number[][], "boardNumbers": number[], "solutionNumbers": number[], "blankCount": number}}
+ * @returns {{"board": number[][], "originalBoard": number[][], "boardNumbers": number[], "solutionNumbers": number[], "blankCount": number}}
  */
 function generateSudoku(sudokuBox) {
     // @ts-expect-error - error and board are mutually exclusive
@@ -99,7 +99,7 @@ function generateSudoku(sudokuBox) {
     const blankCount = board.flat().reduce((acc, value) =>
         value == 0 ? acc + 1 : acc, 0
     );
-    return { board, boardNumbers, solutionNumbers: solution.flat(), blankCount, solution }
+    return { board, originalBoard: structuredClone(board), boardNumbers, solutionNumbers: solution.flat(), blankCount }
 }
 
 
@@ -170,10 +170,11 @@ function parseEvent(data) {
 
 /**
  * @param {number[][]} board
+ * @param {number[][]} originalBoard
  * @param {NodeJS.WriteStream & { fd: 1; }} stdout
  */
-function writeSudoku(board, stdout) {
-    board.map(renderRow).forEach(row => stdout.write(row + "\n"));
+function writeSudoku(board, originalBoard, stdout) {
+    board.map((row, i) => renderRow(row, originalBoard[i], i)).forEach(row => stdout.write(row + "\n"));
 }
 
 /**
@@ -198,10 +199,10 @@ function writeProgress(stdout, percentComplete, percentTime, timeRemaining) {
  * @param {number} y
  * @returns {string}
  */
-function renderRow(row, y) {
+function renderRow(row, originalRow, y) {
     return [
         `<tr id="row_${y}">`,
-        ...row.map((value, x) => `<td>${renderCell(value, x, y, value != 0)}</td>`),
+        ...row.map((value, x) => `<td>${renderCell(value, x, y, originalRow[x] != 0)}</td>`),
         `</tr>`
     ].join("");
 }
