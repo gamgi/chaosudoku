@@ -20,6 +20,7 @@ if (require.main === module) {
 function main(stdin, stdout, sudokuBox) {
     let checkInterval;
     let context;
+    writeMessage("Starting...", process.stdout);
 
     const startGame = () => {
         writeMessage("", process.stdout);
@@ -47,6 +48,7 @@ function main(stdin, stdout, sudokuBox) {
         writeProgress(stdout, percentComplete, percentTime, timeRemaining);
     };
 
+    startGame();
     stdin.on("data", (data) => {
         // @ts-expect-error - data is actually implicitly cast to string
         const event = parseEvent(JSON.parse(data));
@@ -63,7 +65,6 @@ function main(stdin, stdout, sudokuBox) {
                 break;
         }
     })
-    startGame();
 }
 
 
