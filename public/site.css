@@ -141,9 +141,9 @@ table td {
 }
 
 #sudoku input:read-write {
-    -webkit-animation-duration: 3s;
+    -webkit-animation-duration: 5s;
     -webkit-animation-name: fading;
-    animation-duration: 3s;
+    animation-duration: 5s;
     animation-name: fading;
 }
 
