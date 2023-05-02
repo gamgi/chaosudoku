@@ -12,7 +12,5 @@ if (require.main === module) {
   } catch (e) {
     writeMessage(e?.message || e, stdout, 'error');
     console.error(e);
-  } finally {
-    console.error('stopping server');
   }
 }

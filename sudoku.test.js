@@ -35,10 +35,13 @@ describe("parseEvent", () => {
 
 describe("renderRow", () => {
 	test('renders empty cell correctly', () => {
-		expect(renderRow([0], 0)).toEqual(`<tr id="row_0"><td><input id="cell_0_0" hx-swap-oob="true" name="cell_0_0" value="" hx-ws="send" hx-trigger="keyup changed" maxlength="1" onfocus="this.select()" onclick="this.select()" /></td></tr>`);
+		expect(renderRow([0], [0], 0)).toEqual(`<tr id="row_0"><td><input id="cell_0_0" hx-swap-oob="true" name="cell_0_0" value="" hx-ws="send" hx-trigger="keyup changed" maxlength="1" onfocus="this.select()" onclick="this.select()" /></td></tr>`);
 	});
 	test('renders prefilled cell correctly', () => {
-		expect(renderRow([1], 0)).toEqual(`<tr id="row_0"><td><input id="cell_0_0" disabled="true" hx-swap-oob="true" name="cell_0_0" value="1" /></td></tr>`);
+		expect(renderRow([1], [1], 0)).toEqual(`<tr id="row_0"><td><input id="cell_0_0" disabled="true" hx-swap-oob="true" name="cell_0_0" value="1" /></td></tr>`);
+	});
+	test('renders filled cell correctly', () => {
+		expect(renderRow([0], [1], 0)).toEqual(`<tr id="row_0"><td><input id="cell_0_0" disabled="true" hx-swap-oob="true" name="cell_0_0" value="" /></td></tr>`);
 	});
 });
 
