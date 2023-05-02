@@ -2,7 +2,7 @@
   "name": "chaosudoku",
   "version": "0.1.0",
   "description": "",
-  "main": "index.ts",
+  "main": "index.js",
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch"

@@ -17,4 +17,4 @@ COPY --chown=node:node sudoku.js .
 
 CMD scalesocket --addr 0.0.0.0:5000 --staticdir /var/www/public/\
     --joinmsg '{"t":"Join","id":#ID}'\
-    node -- ./sudoku.js
+    node -- ./index.js

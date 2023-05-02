@@ -1,16 +1,5 @@
 // @ts-check
 
-const SudokuBox = require("sudokubox");
-
-if (require.main === module) {
-    process.stderr.write("starting server\n");
-    try {
-        main(process.stdin, process.stdout, new SudokuBox());
-    } catch (e) {
-        writeMessage(e?.message || e, process.stdout, "error");
-        console.error(e);
-    }
-}
 
 /**
  * @param {NodeJS.ReadStream & { fd: 0; }} stdin
