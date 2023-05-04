@@ -2,66 +2,43 @@
 
 /**
  * @typedef {import('sudokubox')} SudokuBox
- * @typedef {{ board: number[][]; originalBoard: number[][], solutionNumbers: number[]; blankCount: number; startTime: any; endTime: any; }} Context
+ * @typedef {{ board: number[][]; originalBoard: number[][], solutionNumbers: number[]; blankCount: number; isEnded: boolean }} GameState
+ * @typedef {{startTime: number, endTime: number}} TimeState
+ * @typedef {{ctx: GameState & TimeState, checkInterval: NodeJS.Timer}} State
+ * @typedef {[null] | ["setCell", number, number, number] | ["clearCell", number, number] | ["newPlayer", number] | ["startGame"]} Event
  */
 
 /**
- * @param {NodeJS.ReadStream & { fd: 0; }} stdin
- * @param {NodeJS.WriteStream & { fd: 1; }} stdout
- * @param {SudokuBox} sudokuBox
+ * @param {Event} event
+ * @param {State} state
+ * @param {NodeJS.Process} proc
+ * @param {SudokuBox} sudoku
  */
-async function main(stdin, stdout, sudokuBox) {
-  let checkInterval;
-  let context;
-
-  const startGame = () => {
-    clearInterval(checkInterval);
-    context = {
-      ...generateTimes(10),
-      ...generateSudoku(sudokuBox),
-    };
-
-    writeSudoku(context.board, context.originalBoard, stdout);
-
-    checkInterval = setInterval(checkGame, 2500, context);
-  };
-
-  const checkGame = (/** @type {Context} */ ctx) => {
-    const { percentComplete, isComplete } = checkSudoku(ctx);
-    const { percentTime, timeRemaining, isOuttaTime } = checkTime(ctx);
-    if (isOuttaTime) {
-      writeMessage('Failed!', process.stdout);
-      clearInterval(checkInterval);
-      setTimeout(() => startGame(), 5000);
-    } else if (isComplete) {
-      writeMessage('Success!', process.stdout);
-      clearInterval(checkInterval);
-      setTimeout(() => startGame(), 5000);
+function handleEvent(event, state, proc, sudoku) {
+  switch (event[0]) {
+    case 'setCell': {
+      const [_, x, y, value] = event;
+      state.ctx.board[y][x] = value;
+      proc.stdout.write(`${renderCell(value, x, y)}\n`);
+      break;
     }
-    writeProgress(stdout, percentComplete, percentTime, timeRemaining);
-  };
+    case 'newPlayer':
+      writeSudoku(state.ctx.board, state.ctx.originalBoard, proc);
+      break;
+    case 'startGame':
+      clearInterval(state?.checkInterval);
+      state.ctx = {
+        ...generateTimes(10),
+        ...generateSudoku(sudoku),
+      };
 
-  startGame();
-  stdin.on('data', (data) => {
-    try {
-      // @ts-expect-error - data is actually implicitly cast to string
-      const event = parseEvent(JSON.parse(data));
-      switch (event[0]) {
-        case 'setCell':
-          const [_, x, y, value] = event;
-          context.board[y][x] = value;
-          stdout.write(`${renderCell(value, x, y)}\n`);
-          break;
-        case 'newPlayer':
-          writeSudoku(context.board, context.originalBoard, stdout);
-          break;
-        default:
-          break;
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  });
+      state.checkInterval = setInterval(checkGame, 2500, state, proc, sudoku);
+
+      writeSudoku(state.ctx.board, state.ctx.originalBoard, proc);
+      break;
+    default:
+      break;
+  }
 }
 
 /**
@@ -76,18 +53,18 @@ function generateTimes(roundTimeMins) {
 }
 
 /**
- * @param {SudokuBox} sudokuBox
- * @returns {Context}
+ * @param {SudokuBox} sudoku
+ * @returns {GameState}
  */
-function generateSudoku(sudokuBox) {
+function generateSudoku(sudoku) {
   // @ts-expect-error - error and board are mutually exclusive
-  const { board, puzzle: boardNumbers, error } = sudokuBox.generate({ level: 'EASY' });
+  const { board, puzzle: boardNumbers, error } = sudoku.generate({ level: 'EASY' });
 
   if (error) {
     throw new Error(`Failed to generate sudoku: ${error.message}`);
   }
 
-  const { isPuzzleSolved, board: solution } = sudokuBox.solve({ input: boardNumbers });
+  const { isPuzzleSolved, board: solution } = sudoku.solve({ input: boardNumbers });
 
   if (!isPuzzleSolved) {
     throw new Error('Failed to solve generated sudoku');
@@ -95,23 +72,48 @@ function generateSudoku(sudokuBox) {
 
   const blankCount = board.flat().reduce((acc, value) => (value == 0 ? acc + 1 : acc), 0);
   return {
-    board, originalBoard: structuredClone(board), boardNumbers, solutionNumbers: solution.flat(), blankCount,
+    board, originalBoard: structuredClone(board), solutionNumbers: solution.flat(), blankCount,
   };
 }
 
 /**
- * @param {Context} context
+ * @param {State} state
+ * @param {NodeJS.Process} proc
+ * @param {SudokuBox} sudoku
+ */
+function checkGame(state, proc, sudoku) {
+  const { percentComplete, isComplete } = checkSudoku(state.ctx);
+  const { percentTime, timeRemaining, isOuttaTime } = checkTime(state.ctx);
+  if (isOuttaTime) {
+    writeMessage('Failed!', process.stdout);
+    clearInterval(state.checkInterval);
+    setTimeout(() => handleEvent(['startGame'], state, proc, sudoku), 5000);
+    // state.ctx.isEnded = true;
+  } else if (isComplete) {
+    writeMessage('Success!', process.stdout);
+    clearInterval(state.checkInterval);
+    setTimeout(() => handleEvent(['startGame'], state, proc, sudoku), 5000);
+    // state.ctx.isEnded = true;
+  }
+  writeProgress(proc.stdout, percentComplete, percentTime, timeRemaining);
+}
+
+/**
+ * @param {GameState} context
  * @returns {{"isComplete": boolean, "percentComplete": number}}
  */
 function checkSudoku({ board, solutionNumbers, blankCount }) {
   const totalCount = solutionNumbers.length;
-  const correctCount = board.flat().reduce((acc, value, i) => ((value == solutionNumbers[i]) ? acc + 1 : acc), 0);
-  const percentComplete = Math.floor((correctCount + blankCount - totalCount) / (blankCount) * 10) * 10;
+  // eslint-disable-next-line max-len
+  const correctCount = board.flat().reduce((acc, value, i) => ((value === solutionNumbers[i]) ? acc + 1 : acc), 0);
+  // eslint-disable-next-line max-len
+  const percentComplete = Math.floor(((correctCount + blankCount - totalCount) / blankCount) * 10) * 10;
 
   return { percentComplete, isComplete: correctCount === totalCount };
 }
 
 /**
+ * @param {TimeState} context
 * @returns {{"isOuttaTime": boolean, "percentTime": number, "timeRemaining": number}}
 */
 function checkTime({ startTime, endTime }) {
@@ -129,7 +131,7 @@ function checkTime({ startTime, endTime }) {
  * * ScaleSocket room events of the form `{"t": "Join", "arg": 123}`
  *
  * @param {Object} data
- * @returns {[null] | ["setCell", number, number, number] | ["clearCell", number, number] | ["newPlayer", number]}
+ * @returns {Event}
  */
 function parseEvent(data) {
   const htmxElementId = /** @type {string | undefined} */ (data?.HEADERS?.['HX-Trigger']);
@@ -142,7 +144,7 @@ function parseEvent(data) {
     if (prefix == 'cell' && coordinates.length == 2 && payload) {
       const value = payload ?? 0;
       const args = /** @type {[number, number, number]} */
-                ([...coordinates, value].map((v) => parseInt(v)));
+        ([...coordinates, value].map((v) => parseInt(v)));
       if (args.some(isOutOfBounds)) return [null];
 
       return ['setCell', ...args];
@@ -158,12 +160,12 @@ function parseEvent(data) {
 /**
  * @param {number[][]} board
  * @param {number[][]} originalBoard
- * @param {NodeJS.WriteStream & { fd: 1; }} stdout
+ * @param {NodeJS.Process} proc
  */
-function writeSudoku(board, originalBoard, stdout) {
+function writeSudoku(board, originalBoard, proc) {
   board.map(
     (row, i) => renderRow(row, originalBoard[i], i),
-  ).forEach((row) => stdout.write(`${row}\n`));
+  ).forEach((row) => proc.stdout.write(`${row}\n`));
 }
 
 /**
@@ -220,9 +222,10 @@ function renderCell(value, x, y, disabled = false) {
  * @returns {boolean}
  */
 function isOutOfBounds(value) {
-  return isNaN(value) || value < 0 || value > 9;
+  return Number.isNaN(value) || value < 0 || value > 9;
 }
 
 module.exports = {
-  main, parseEvent, renderRow, writeMessage, writeProgress, generateTimes, generateSudoku, checkSudoku, checkTime,
+  // eslint-disable-next-line max-len
+  parseEvent, renderRow, writeSudoku, writeMessage, writeProgress, generateTimes, generateSudoku, checkSudoku, checkTime, handleEvent, checkGame,
 };
