@@ -1,37 +1,18 @@
 // @ts-check
 
 const SudokuBox = require('sudokubox');
-const {
-  writeMessage, writeSudoku, generateSudoku, generateTimes,
-  parseEvent, handleEvent, checkGame, startGame,
-} = require('./sudoku');
+const { parseEvent, handleEvent } = require('./sudoku');
 
-if (require.main === module) {
-  try {
-    console.error('starting server');
-    main(process, new SudokuBox());
-  } catch (e) {
-    writeMessage(e?.message || e, process.stdout, 'error');
-    console.error(e);
-  }
-}
+/** @type {import('./sudoku.js').State}} */
+// @ts-expect-error state is initialized by startGame
+const state = ({ ctx: {}, checkInterval: undefined });
+const sudoku = new SudokuBox();
 
-/**
- * @param {NodeJS.Process} proc;
- * @param {SudokuBox} sudokuBox
- */
-function main(proc, sudokuBox) {
-  const state = { ctx: {}, checkInterval: undefined };
-  // @ts-expect-error state is initialized by startGame
-  handleEvent(['startGame'], state, proc, sudokuBox);
+handleEvent(['startGame'], state, process, sudoku);
 
-  proc.stdin.on('data', (data) => {
-    try {
-      // @ts-expect-error - data is actually implicitly cast to string
-      const event = parseEvent(JSON.parse(data));
-      handleEvent(event, state, proc, sudokuBox);
-    } catch (err) {
-      console.error(err);
-    }
-  });
-}
+process.stdin.on('data', (data) => handleEvent(
+  parseEvent(JSON.parse(data.toString())),
+  state,
+  process,
+  sudoku,
+));
