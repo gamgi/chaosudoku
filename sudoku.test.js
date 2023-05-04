@@ -1,7 +1,7 @@
 const SudokuBox = require('sudokubox');
 const { checkSudoku, parseEvent, renderRow, handleEvent, writeSudoku, checkGame } = require('./sudoku');
 
-const createCtx = (ctx) => ({ board: [[]], originalBoard: [[]], ...ctx });
+const createCtx = (ctx) => ({ board: [[]], originalBoard: [[]], startTime: Date.now(), endTime: Date.now() + 10000, ...ctx });
 const createState = (ctx) => ({ ctx: createCtx(ctx) });
 const createProcess = () => ({ stdout: { read: jest.fn(), write: jest.fn() } });
 
@@ -59,13 +59,31 @@ describe('handleEvent', () => {
     expect(mockProcess.stdout.write).toHaveBeenCalled();
   });
 
-  test('startGame starts checking sudoku with interval', () => {
-    const ctx = createCtx();
+  test('startGame initializes state context', () => {
+    const state = ({ ctx: {} });
     const mockProcess = createProcess();
-    handleEvent(['startGame'], ctx, mockProcess, sudokuBox);
 
-    expect(ctx?.checkInterval).not.toBeUndefined();
-    clearInterval(ctx.checkInterval);
+    handleEvent(['startGame'], state, mockProcess, sudokuBox);
+    clearInterval(state.checkInterval);
+
+    expect(Object.keys(state.ctx)).toEqual([
+      'startTime',
+      'endTime',
+      'board',
+      'originalBoard',
+      'solutionNumbers',
+      'blankCount',
+    ]);
+  });
+
+  test('startGame starts checking sudoku with interval', () => {
+    const state = createState();
+    const mockProcess = createProcess();
+
+    handleEvent(['startGame'], state, mockProcess, sudokuBox);
+    clearInterval(state.checkInterval);
+
+    expect(state.checkInterval).not.toBeUndefined();
   });
 });
 
@@ -126,5 +144,23 @@ describe('checkSudoku', () => {
     const { percentComplete, isComplete } = checkSudoku({ board: [[1, 2, 3, 4]], solutionNumbers: [1, 2, 3, 4], blankCount: 2 });
     expect(percentComplete).toBe(100);
     expect(isComplete).toBe(true);
+  });
+});
+
+describe('checkGame', () => {
+  test('sends success message for completed board', () => {
+    const state = createState({ board: [[1, 2, 3, 4]], solutionNumbers: [1, 2, 3, 4], blankCount: 2 });
+    const mockProcess = createProcess();
+    checkGame(state, mockProcess);
+
+    expect(mockProcess.stdout.write).toHaveBeenCalledWith(expect.stringMatching(/Success/));
+  });
+
+  test('sends progress', () => {
+    const state = createState({ board: [[1, 0]], solutionNumbers: [1, 2], blankCount: 1 });
+    const mockProcess = createProcess();
+    checkGame(state, mockProcess);
+
+    expect(mockProcess.stdout.write).toHaveBeenCalledWith(expect.stringMatching(/<span id="completion-label">0% completed/));
   });
 });

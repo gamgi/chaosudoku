@@ -81,20 +81,22 @@ function generateSudoku(sudoku) {
  * @param {NodeJS.Process} proc
  * @param {SudokuBox} sudoku
  */
-function checkGame(state, proc, sudoku) {
+function checkGame(state, proc, sudoku, isRestart = true) {
   const { percentComplete, isComplete } = checkSudoku(state.ctx);
   const { percentTime, timeRemaining, isOuttaTime } = checkTime(state.ctx);
+  const shouldRestart = (isOuttaTime || isComplete) && isRestart;
+
   if (isOuttaTime) {
     writeMessage('Failed!', process.stdout);
-    clearInterval(state.checkInterval);
-    setTimeout(() => handleEvent(['startGame'], state, proc, sudoku), 5000);
-    // state.ctx.isEnded = true;
   } else if (isComplete) {
     writeMessage('Success!', process.stdout);
+  }
+
+  if (shouldRestart) {
     clearInterval(state.checkInterval);
     setTimeout(() => handleEvent(['startGame'], state, proc, sudoku), 5000);
-    // state.ctx.isEnded = true;
   }
+
   writeProgress(proc.stdout, percentComplete, percentTime, timeRemaining);
 }
 
