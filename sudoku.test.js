@@ -1,7 +1,7 @@
 const SudokuBox = require('sudokubox');
 const { checkSudoku, parseEvent, renderRow, handleEvent, writeSudoku, checkGame } = require('./sudoku');
 
-const createCtx = (ctx) => ({ board: [[]], originalBoard: [[]], startTime: Date.now(), endTime: Date.now() + 10000, ...ctx });
+const createCtx = (ctx) => ({ board: [[]], boardHint: [[]], startTime: Date.now(), endTime: Date.now() + 10000, ...ctx });
 const createState = (ctx) => ({ ctx: createCtx(ctx) });
 const createProcess = () => ({ stdout: { read: jest.fn(), write: jest.fn() } });
 
@@ -41,7 +41,7 @@ describe('handleEvent', () => {
   const sudokuBox = new SudokuBox();
 
   test('setCell sets sudoku cell and sends board', () => {
-    const state = createState({ board: [[1, 0, 3]], originalBoard: [[1, 0, 3]] });
+    const state = createState({ board: [[1, 0, 3]], boardHint: [[1, 0, 3]] });
     const mockProcess = createProcess();
     const [x, y] = [1, 0];
     handleEvent(['setCell', x, y, 2], state, mockProcess, sudokuBox);
@@ -52,7 +52,7 @@ describe('handleEvent', () => {
   });
 
   test('newPlayer sends board', () => {
-    const state = createState({ board: [[1, 0]], originalBoard: [[1, 2]] });
+    const state = createState({ board: [[1, 0]], boardHint: [[1, 2]] });
     const mockProcess = createProcess();
     handleEvent(['newPlayer', 123], state, mockProcess, sudokuBox);
 
@@ -70,8 +70,8 @@ describe('handleEvent', () => {
       'startTime',
       'endTime',
       'board',
-      'originalBoard',
-      'solutionNumbers',
+      'boardHint',
+      'solution',
       'blankCount',
     ]);
   });
@@ -89,19 +89,16 @@ describe('handleEvent', () => {
 
 describe('renderRow', () => {
   test('renders empty cell correctly', () => {
-    // expect(renderRow([0], [0], 0)).toEqual('<tr id="row_0"><td><input id="cell_0_0" hx-swap-oob="true" name="cell_0_0" value="" hx-ws="send" hx-trigger="keyup changed" maxlength="1" onfocus="this.select()" onclick="this.select()" /></td></tr>');
-    expect(renderRow([0], [0], 0)).toEqual(expect.stringMatching('<input .*? value="" .*?/>'));
-    expect(renderRow([0], [0], 0)).toEqual(expect.stringMatching('<input .*? hx-ws="send" .*?/>'));
+    expect(renderRow([0], [0], 0)).toEqual(expect.stringMatching('<input.*? value="" .*?/>'));
+    expect(renderRow([0], [0], 0)).toEqual(expect.stringMatching('<input.*? hx-ws="send" .*?/>'));
   });
   test('renders prefilled cell correctly', () => {
-    // expect(renderRow([1], [1], 0)).toEqual('<tr id="row_0"><td><input id="cell_0_0" disabled="true" hx-swap-oob="true" name="cell_0_0" value="1" /></td></tr>');
-    expect(renderRow([1], [1], 0)).toEqual(expect.stringMatching('<input .*? value="1" .*?/>'));
-    expect(renderRow([1], [1], 0)).toEqual(expect.stringMatching('<input .*? disabled="true" .*?/>'));
+    expect(renderRow([1], [1], 0)).toEqual(expect.stringMatching('<input.*? value="1" .*?/>'));
+    expect(renderRow([1], [1], 0)).toEqual(expect.stringMatching('<input.*? disabled="true" .*?/>'));
   });
   test('renders filled cell correctly', () => {
-    // expect(renderRow([0], [1], 0)).toEqual('<tr id="row_0"><td><input id="cell_0_0" disabled="true" hx-swap-oob="true" name="cell_0_0" value="" /></td></tr>');
-    expect(renderRow([0], [1], 0)).toEqual(expect.stringMatching('<input .*? value="" .*?/>'));
-    expect(renderRow([0], [1], 0)).toEqual(expect.stringMatching('<input .*? disabled="true" .*?/>'));
+    expect(renderRow([0], [1], 0)).toEqual(expect.stringMatching('<input.*? value="" .*?/>'));
+    expect(renderRow([0], [1], 0)).toEqual(expect.stringMatching('<input.*? disabled="true" .*?/>'));
   });
 });
 
@@ -117,31 +114,31 @@ describe('writeSudoku', () => {
 
 describe('checkSudoku', () => {
   test('returns percentComplete correctly for unfilled board', () => {
-    const { percentComplete, isComplete } = checkSudoku({ board: [[1, 0, 0, 4]], solutionNumbers: [1, 2, 3, 4], blankCount: 2 });
+    const { percentComplete, isComplete } = checkSudoku({ board: [[1, 0, 0, 4]], solution: [1, 2, 3, 4], blankCount: 2 });
     expect(percentComplete).toBe(0);
     expect(isComplete).toBe(false);
   });
 
   test('returns percentComplete correctly for board with errors', () => {
-    const { percentComplete, isComplete } = checkSudoku({ board: [[1, 9, 9, 4]], solutionNumbers: [1, 2, 3, 4], blankCount: 2 });
+    const { percentComplete, isComplete } = checkSudoku({ board: [[1, 9, 9, 4]], solution: [1, 2, 3, 4], blankCount: 2 });
     expect(percentComplete).toBe(0);
     expect(isComplete).toBe(false);
   });
 
   test('returns percentComplete correctly for half-completed board', () => {
-    const { percentComplete, isComplete } = checkSudoku({ board: [[1, 2, 0, 4]], solutionNumbers: [1, 2, 3, 4], blankCount: 2 });
+    const { percentComplete, isComplete } = checkSudoku({ board: [[1, 2, 0, 4]], solution: [1, 2, 3, 4], blankCount: 2 });
     expect(percentComplete).toBe(50);
     expect(isComplete).toBe(false);
   });
 
   test('returns percentComplete correctly for half-completed board with errors', () => {
-    const { percentComplete, isComplete } = checkSudoku({ board: [[1, 2, 9, 4]], solutionNumbers: [1, 2, 3, 4], blankCount: 2 });
+    const { percentComplete, isComplete } = checkSudoku({ board: [[1, 2, 9, 4]], solution: [1, 2, 3, 4], blankCount: 2 });
     expect(percentComplete).toBe(50);
     expect(isComplete).toBe(false);
   });
 
   test('returns percentComplete correctly for completed board', () => {
-    const { percentComplete, isComplete } = checkSudoku({ board: [[1, 2, 3, 4]], solutionNumbers: [1, 2, 3, 4], blankCount: 2 });
+    const { percentComplete, isComplete } = checkSudoku({ board: [[1, 2, 3, 4]], solution: [1, 2, 3, 4], blankCount: 2 });
     expect(percentComplete).toBe(100);
     expect(isComplete).toBe(true);
   });
@@ -149,17 +146,17 @@ describe('checkSudoku', () => {
 
 describe('checkGame', () => {
   test('sends success message for completed board', () => {
-    const state = createState({ board: [[1, 2, 3, 4]], solutionNumbers: [1, 2, 3, 4], blankCount: 2 });
+    const state = createState({ board: [[1, 2, 3, 4]], solution: [1, 2, 3, 4], blankCount: 2 });
     const mockProcess = createProcess();
-    checkGame(state, mockProcess);
+    checkGame(state, mockProcess, jest.fn(), false);
 
-    expect(mockProcess.stdout.write).toHaveBeenCalledWith(expect.stringMatching(/Success/));
+    expect(mockProcess.stdout.write).toHaveBeenCalledWith(expect.stringMatching(/<div.*? id="message" .*?>Success/));
   });
 
   test('sends progress', () => {
-    const state = createState({ board: [[1, 0]], solutionNumbers: [1, 2], blankCount: 1 });
+    const state = createState({ board: [[1, 0]], solution: [1, 2], blankCount: 1 });
     const mockProcess = createProcess();
-    checkGame(state, mockProcess);
+    checkGame(state, mockProcess, jest.fn(), false);
 
     expect(mockProcess.stdout.write).toHaveBeenCalledWith(expect.stringMatching(/<span id="completion-label">0% completed/));
   });

@@ -2,7 +2,7 @@
 
 /**
  * @typedef {import('sudokubox')} SudokuBox
- * @typedef {{ board: number[][]; originalBoard: number[][], solutionNumbers: number[]; blankCount: number; isEnded: boolean }} GameState
+ * @typedef {{ board: number[][]; boardHint: number[][], solution: number[]; blankCount: number;}} GameState
  * @typedef {{startTime: number, endTime: number}} TimeState
  * @typedef {{ctx: GameState & TimeState, checkInterval: NodeJS.Timer}} State
  * @typedef {[null] | ["setCell", number, number, number] | ["clearCell", number, number] | ["newPlayer", number] | ["startGame"]} Event
@@ -23,7 +23,7 @@ function handleEvent(event, state, proc, sudoku) {
       break;
     }
     case 'newPlayer':
-      writeSudoku(state.ctx.board, state.ctx.originalBoard, proc);
+      writeSudoku(state.ctx.board, state.ctx.boardHint, proc);
       break;
     case 'startGame':
       clearInterval(state?.checkInterval);
@@ -34,7 +34,7 @@ function handleEvent(event, state, proc, sudoku) {
 
       state.checkInterval = setInterval(checkGame, 2500, state, proc, sudoku);
 
-      writeSudoku(state.ctx.board, state.ctx.originalBoard, proc);
+      writeSudoku(state.ctx.board, state.ctx.boardHint, proc);
       break;
     default:
       break;
@@ -58,21 +58,24 @@ function generateTimes(roundTimeMins) {
  */
 function generateSudoku(sudoku) {
   // @ts-expect-error - error and board are mutually exclusive
-  const { board, puzzle: boardNumbers, error } = sudoku.generate({ level: 'EASY' });
+  const { board, puzzle, error } = sudoku.generate({ level: 'EASY' });
 
   if (error) {
     throw new Error(`Failed to generate sudoku: ${error.message}`);
   }
 
-  const { isPuzzleSolved, board: solution } = sudoku.solve({ input: boardNumbers });
+  const { isPuzzleSolved, output: solution } = sudoku.solve({ input: puzzle });
 
   if (!isPuzzleSolved) {
     throw new Error('Failed to solve generated sudoku');
   }
 
-  const blankCount = board.flat().reduce((acc, value) => (value == 0 ? acc + 1 : acc), 0);
+  const blankCount = board.flat().reduce(
+    (acc, value) => (value === 0 ? acc + 1 : acc),
+    0,
+  );
   return {
-    board, originalBoard: structuredClone(board), solutionNumbers: solution.flat(), blankCount,
+    board, boardHint: structuredClone(board), solution, blankCount,
   };
 }
 
@@ -87,9 +90,9 @@ function checkGame(state, proc, sudoku, isRestart = true) {
   const shouldRestart = (isOuttaTime || isComplete) && isRestart;
 
   if (isOuttaTime) {
-    writeMessage('Failed!', process.stdout);
+    writeMessage('Failed!', proc.stdout);
   } else if (isComplete) {
-    writeMessage('Success!', process.stdout);
+    writeMessage('Success!', proc.stdout);
   }
 
   if (shouldRestart) {
@@ -104,10 +107,10 @@ function checkGame(state, proc, sudoku, isRestart = true) {
  * @param {GameState} context
  * @returns {{"isComplete": boolean, "percentComplete": number}}
  */
-function checkSudoku({ board, solutionNumbers, blankCount }) {
-  const totalCount = solutionNumbers.length;
+function checkSudoku({ board, solution, blankCount }) {
+  const totalCount = solution.length;
   // eslint-disable-next-line max-len
-  const correctCount = board.flat().reduce((acc, value, i) => ((value === solutionNumbers[i]) ? acc + 1 : acc), 0);
+  const correctCount = board.flat().reduce((acc, value, i) => ((value === solution[i]) ? acc + 1 : acc), 0);
   // eslint-disable-next-line max-len
   const percentComplete = Math.floor(((correctCount + blankCount - totalCount) / blankCount) * 10) * 10;
 
@@ -161,12 +164,12 @@ function parseEvent(data) {
 
 /**
  * @param {number[][]} board
- * @param {number[][]} originalBoard
+ * @param {number[][]} boardHint
  * @param {NodeJS.Process} proc
  */
-function writeSudoku(board, originalBoard, proc) {
+function writeSudoku(board, boardHint, proc) {
   board.map(
-    (row, i) => renderRow(row, originalBoard[i], i),
+    (row, i) => renderRow(row, boardHint[i], i),
   ).forEach((row) => proc.stdout.write(`${row}\n`));
 }
 
@@ -198,10 +201,10 @@ function writeProgress(stdout, percentComplete, percentTime, timeRemaining) {
  * @param {number} y
  * @returns {string}
  */
-function renderRow(row, originalRow, y) {
+function renderRow(row, rowHint, y) {
   return [
     `<tr id="row_${y}">`,
-    ...row.map((value, x) => `<td>${renderCell(value, x, y, originalRow[x] != 0)}</td>`),
+    ...row.map((value, x) => `<td>${renderCell(value, x, y, rowHint[x] !== 0)}</td>`),
     '</tr>',
   ].join('');
 }
